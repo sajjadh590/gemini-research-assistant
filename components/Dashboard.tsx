@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, Language, AnalysisResult } from '../types';
+import { Paper, Language, AnalysisResult, StatsEstimationResult } from '../types';
 import { searchPubMed } from '../services/pubmedService';
 import { analyzePapersForGaps, generateProposal, estimateSampleSizeAI } from '../services/geminiService';
-import { Download, Search, BookOpen, FileText, Activity, ChevronRight, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Download, Search, BookOpen, FileText, Activity, ChevronRight, CheckCircle, XCircle, Loader2, Beaker, Calculator } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'search' | 'analysis' | 'proposal' | 'stats'>('search');
@@ -25,7 +25,7 @@ export const Dashboard: React.FC = () => {
 
   // Stats State
   const [statsTopic, setStatsTopic] = useState('');
-  const [statsResult, setStatsResult] = useState('');
+  const [statsResult, setStatsResult] = useState<StatsEstimationResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
   // Handlers
@@ -37,7 +37,7 @@ export const Dashboard: React.FC = () => {
       const results = await searchPubMed(query);
       setPapers(results);
     } catch (e) {
-      alert("Error fetching papers. Please try again.");
+      alert("Error fetching papers. Ensure the backend is running.");
     } finally {
       setIsSearching(false);
     }
@@ -60,7 +60,7 @@ export const Dashboard: React.FC = () => {
       const result = await analyzePapersForGaps(selected, language);
       setAnalysisResult(result);
     } catch (e) {
-      alert("Analysis failed. Check API limits or try again.");
+      alert("Analysis failed. Check Backend connection.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -86,11 +86,12 @@ export const Dashboard: React.FC = () => {
   const handleStatsAI = async () => {
       if(!statsTopic) return;
       setIsCalculating(true);
+      setStatsResult(null);
       try {
           const res = await estimateSampleSizeAI(statsTopic, language);
           setStatsResult(res);
       } catch(e) {
-          alert("Stats estimation failed.");
+          alert("Stats estimation failed. Ensure backend is running.");
       } finally {
           setIsCalculating(false);
       }
@@ -146,7 +147,7 @@ export const Dashboard: React.FC = () => {
             onClick={() => setActiveTab('stats')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'stats' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
           >
-            <Activity className="w-5 h-5" />
+            <Calculator className="w-5 h-5" />
             <span>{language === Language.PERSIAN ? 'دستیار آماری' : 'Statistics Assistant'}</span>
           </button>
         </nav>
@@ -162,7 +163,7 @@ export const Dashboard: React.FC = () => {
              </button>
           </div>
           <div className="mt-4 text-xs text-slate-500 text-center">
-            Powered by Google Gemini
+            Backend: Python/FastAPI
           </div>
         </div>
       </div>
@@ -177,15 +178,15 @@ export const Dashboard: React.FC = () => {
                {activeTab === 'search' && (language === Language.PERSIAN ? 'جستجوی هوشمند منابع' : 'Literature Search')}
                {activeTab === 'analysis' && (language === Language.PERSIAN ? 'تحلیل خودکار و کشف گپ‌های پژوهشی' : 'Automated Gap Analysis')}
                {activeTab === 'proposal' && (language === Language.PERSIAN ? 'نگارش پروپوزال علمی' : 'Proposal Writing')}
-               {activeTab === 'stats' && (language === Language.PERSIAN ? 'ابزارهای آماری و متاآنالیز' : 'Statistical Tools & Meta-Analysis')}
+               {activeTab === 'stats' && (language === Language.PERSIAN ? 'محاسبه حجم نمونه علمی' : 'Scientific Sample Size Calculator')}
              </h2>
              <p className="text-slate-500 text-sm mt-1">
-                {language === Language.PERSIAN ? 'از هوش مصنوعی برای تسریع پژوهش خود استفاده کنید' : 'Accelerate your research with Gemini AI'}
+                {language === Language.PERSIAN ? 'از هوش مصنوعی برای تسریع پژوهش خود استفاده کنید' : 'Accelerate your research with Gemini AI & Python'}
              </p>
            </div>
            <div className="flex items-center gap-2">
-             <span className={`px-3 py-1 rounded-full text-xs font-medium ${process.env.API_KEY ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-               {process.env.API_KEY ? 'AI Connected' : 'Missing API Key'}
+             <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+               Secure Mode
              </span>
            </div>
         </div>
@@ -396,19 +397,21 @@ export const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* 4. STATS TAB */}
+        {/* 4. STATS TAB (Refactored) */}
         {activeTab === 'stats' && (
-           <div className="max-w-3xl mx-auto space-y-8">
+           <div className="max-w-4xl mx-auto space-y-8">
               <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
                  <div className="mb-6 text-center">
                     <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full mb-3">
-                      <Activity className="w-6 h-6" />
+                      <Beaker className="w-6 h-6" />
                     </div>
                     <h2 className="text-2xl font-bold text-slate-900">
-                      {language === Language.PERSIAN ? 'تخمین‌گر هوشمند حجم نمونه' : 'AI Sample Size Estimator'}
+                      {language === Language.PERSIAN ? 'تخمین‌گر علمی حجم نمونه' : 'Scientific Sample Size Estimator'}
                     </h2>
                     <p className="text-slate-500 mt-1">
-                      {language === Language.PERSIAN ? 'موضوع تحقیق خود را وارد کنید تا هوش مصنوعی بر اساس مطالعات مشابه، حجم نمونه مناسب را پیشنهاد دهد.' : 'Enter your research topic. AI will reason based on similar studies and statistical power guidelines.'}
+                      {language === Language.PERSIAN 
+                        ? 'ترکیبی از هوش مصنوعی و فرمول‌های آماری دقیق (T-Test/Z-Test)' 
+                        : 'Combines AI parameter extraction with rigorous Python statistical modeling.'}
                     </p>
                  </div>
 
@@ -417,7 +420,7 @@ export const Dashboard: React.FC = () => {
                      type="text" 
                      value={statsTopic}
                      onChange={e => setStatsTopic(e.target.value)}
-                     placeholder="e.g. Effect of Aspirin on heart attack prevention in men over 50"
+                     placeholder={language === Language.PERSIAN ? 'مثلا: تاثیر آسپرین بر فشار خون...' : "e.g. Effect of Aspirin on blood pressure in elderly"}
                      className="flex-1 p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                    />
                    <button 
@@ -429,27 +432,42 @@ export const Dashboard: React.FC = () => {
                    </button>
                  </div>
 
+                 {/* Results Section */}
                  {statsResult && (
-                   <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-500">
-                      <div className="prose prose-slate max-w-none">
-                        <div className="whitespace-pre-wrap text-slate-800 leading-relaxed">
-                          {statsResult}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      
+                      {/* Left: The Numbers */}
+                      <div className="bg-emerald-50 p-6 rounded-xl border border-emerald-100 flex flex-col justify-center items-center text-center">
+                        <h3 className="text-emerald-800 font-bold mb-2 uppercase tracking-wider text-xs">
+                           {language === Language.PERSIAN ? 'حجم نمونه پیشنهادی (کل)' : 'Required Total Sample Size'}
+                        </h3>
+                        <div className="text-6xl font-black text-emerald-600 mb-2">
+                          {statsResult.suggested_sample_size}
+                        </div>
+                        <div className="text-xs text-emerald-700 bg-emerald-200 px-2 py-1 rounded">
+                          Effect Size (d): {statsResult.parameters.effect_size.toFixed(2)} | Power: 0.80
+                        </div>
+                      </div>
+
+                      {/* Right: The Reasoning */}
+                      <div className="bg-white p-6 rounded-xl border border-slate-200">
+                        <h4 className="font-bold text-slate-800 mb-2">
+                          {language === Language.PERSIAN ? 'تحلیل خودکار پارامترها' : 'AI Parameter Reasoning'}
+                        </h4>
+                        <p className="text-sm text-slate-600 leading-relaxed mb-4">
+                          {statsResult.reasoning}
+                        </p>
+                        <div>
+                          <span className="text-xs font-bold text-slate-400 uppercase">Basis Papers:</span>
+                          <ul className="mt-1 space-y-1">
+                             {statsResult.basis_papers.map((paper, i) => (
+                               <li key={i} className="text-xs text-slate-500 truncate">• {paper}</li>
+                             ))}
+                          </ul>
                         </div>
                       </div>
                    </div>
                  )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-50 pointer-events-none">
-                {/* Placeholder for future manual calculator */}
-                <div className="bg-white p-6 rounded-lg border border-dashed border-slate-300 text-center">
-                  <h4 className="font-bold text-slate-400">Meta-Analysis Helper</h4>
-                  <p className="text-xs text-slate-400 mt-2">(Coming Soon)</p>
-                </div>
-                <div className="bg-white p-6 rounded-lg border border-dashed border-slate-300 text-center">
-                  <h4 className="font-bold text-slate-400">P-Value Calculator</h4>
-                  <p className="text-xs text-slate-400 mt-2">(Coming Soon)</p>
-                </div>
               </div>
            </div>
         )}

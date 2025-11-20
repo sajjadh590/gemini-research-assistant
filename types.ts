@@ -35,6 +35,18 @@ export interface SampleSizeParams {
   proportion: number; // 0.5 default
 }
 
+export interface StatsEstimationResult {
+  topic: string;
+  suggested_sample_size: number;
+  parameters: {
+    effect_size: number;
+    alpha: number;
+    power: number;
+  };
+  reasoning: string;
+  basis_papers: string[];
+}
+
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
