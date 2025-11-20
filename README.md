@@ -2,7 +2,7 @@
 title: ScholarAI Research Assistant
 emoji: 🧬
 colorFrom: indigo
-colorTo: cyan
+colorTo: Blue
 sdk: docker
 pinned: false
 app_port: 7860
