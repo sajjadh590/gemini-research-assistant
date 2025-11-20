@@ -18,4 +18,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         # نکته مهم: در خط پایین نام کاربری و نام اسپیس خود را جایگزین کنید
-        run: git push https://Sajjadh590:$HF_TOKEN@huggingface.co/spaces/Sajjadh590/gemini-research-assistant main
+        run: git push --force https://sajjadh590:$HF_TOKEN@huggingface.co/spaces/Sajjadh590/gemini-research-assistant main
