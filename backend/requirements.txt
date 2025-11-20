@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 biopython
-google-genai
+google-generativeai
 statsmodels
 scipy
 numpy
