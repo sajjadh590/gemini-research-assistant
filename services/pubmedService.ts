@@ -1,7 +1,7 @@
 import { Paper } from '../types';
 
-// Update to point to local Python backend (via Vite proxy or direct)
-const API_URL = '/api'; // Vite proxy will handle forwarding to localhost:8000
+// این آدرس به پراکسی Vite اشاره می‌کند که درخواست‌ها را به پایتون (localhost:7860) می‌فرستد
+const API_URL = '/api'; 
 
 export const searchPubMed = async (query: string, maxResults: number = 10): Promise<Paper[]> => {
   try {
@@ -19,10 +19,14 @@ export const searchPubMed = async (query: string, maxResults: number = 10): Prom
     }
 
     const data = await response.json();
-    return data; // Backend returns structured Paper[]
+    
+    // ✅ اصلاح مهم: دریافت آرایه results از داخل آبجکت پاسخ
+    // قبلاً return data بود که باعث می‌شد ریکت گیج شود
+    return data.results || []; 
+
   } catch (error) {
     console.error("PubMed Search Error:", error);
-    // Return empty array to prevent UI crash, but log error
+    // در صورت خطا، یک لیست خالی برمی‌گردانیم تا صفحه سفید نشود
     return [];
   }
 };
