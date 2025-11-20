@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Paper, Language, AnalysisResult, StatsEstimationResult } from '../types';
 import { searchPubMed } from '../services/pubmedService';
 import { analyzePapersForGaps, generateProposal, estimateSampleSizeAI } from '../services/geminiService';
-import { Download, Search, BookOpen, FileText, Activity, ChevronRight, CheckCircle, XCircle, Loader2, Beaker, Calculator } from 'lucide-react';
+import { Download, Search, BookOpen, FileText, Activity, CheckCircle, Loader2, Beaker, Calculator } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'search' | 'analysis' | 'proposal' | 'stats'>('search');
@@ -37,7 +37,7 @@ export const Dashboard: React.FC = () => {
       const results = await searchPubMed(query);
       setPapers(results);
     } catch (e) {
-      alert("Error fetching papers. Ensure the backend is running.");
+      alert("Error fetching papers. Is the Python backend running?");
     } finally {
       setIsSearching(false);
     }
@@ -60,7 +60,7 @@ export const Dashboard: React.FC = () => {
       const result = await analyzePapersForGaps(selected, language);
       setAnalysisResult(result);
     } catch (e) {
-      alert("Analysis failed. Check Backend connection.");
+      alert("Analysis failed. Check backend console.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -91,7 +91,7 @@ export const Dashboard: React.FC = () => {
           const res = await estimateSampleSizeAI(statsTopic, language);
           setStatsResult(res);
       } catch(e) {
-          alert("Stats estimation failed. Ensure backend is running.");
+          alert("Stats estimation failed. Make sure backend has GEMINI_API_KEY set.");
       } finally {
           setIsCalculating(false);
       }
@@ -118,7 +118,7 @@ export const Dashboard: React.FC = () => {
           <h1 className="text-xl font-bold text-indigo-400 flex items-center gap-2">
             <BookOpen className="w-6 h-6" /> ScholarAI
           </h1>
-          <p className="text-xs text-slate-400 mt-1 opacity-70">Automated Research Assistant</p>
+          <p className="text-xs text-slate-400 mt-1 opacity-70">Hybrid Architecture</p>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
@@ -163,7 +163,7 @@ export const Dashboard: React.FC = () => {
              </button>
           </div>
           <div className="mt-4 text-xs text-slate-500 text-center">
-            Backend: Python/FastAPI
+            v2.0 Hybrid • FastAPI/React
           </div>
         </div>
       </div>
@@ -181,12 +181,12 @@ export const Dashboard: React.FC = () => {
                {activeTab === 'stats' && (language === Language.PERSIAN ? 'محاسبه حجم نمونه علمی' : 'Scientific Sample Size Calculator')}
              </h2>
              <p className="text-slate-500 text-sm mt-1">
-                {language === Language.PERSIAN ? 'از هوش مصنوعی برای تسریع پژوهش خود استفاده کنید' : 'Accelerate your research with Gemini AI & Python'}
+                {language === Language.PERSIAN ? 'موتور محاسباتی پایتون فعال است' : 'Python Computational Engine Active'}
              </p>
            </div>
            <div className="flex items-center gap-2">
-             <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-               Secure Mode
+             <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">
+               Backend: Connected
              </span>
            </div>
         </div>

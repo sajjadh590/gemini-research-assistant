@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+biopython
+google-genai
+statsmodels
+scipy
+numpy
+python-dotenv
+requests
+pydantic
