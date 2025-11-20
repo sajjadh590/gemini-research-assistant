@@ -1,14 +1,15 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from typing import List
 import os
 import json
 from dotenv import load_dotenv
 
-# اصلاح مسیر ایمپورت‌ها برای داکر
+# Import Modules
+# (Note: In Docker, pythonpath includes /code, so imports work directly)
 from app.modules.pubmed_client import PubMedClient
 from app.modules.gemini_client import GeminiClient
 from app.modules.stats_engine import StatsEngine
@@ -17,6 +18,7 @@ load_dotenv()
 
 app = FastAPI()
 
+# CORS Setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# کلاینت‌ها
+# Initialize Clients
 pubmed = PubMedClient()
 stats_tool = StatsEngine()
 gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -35,9 +37,17 @@ if gemini_api_key:
     try:
         gemini = GeminiClient()
     except:
+        print("Warning: Gemini Client failed to initialize.")
         pass
 
-# مدل‌ها
+# --- Path Setup (THE FIX) ---
+# پیدا کردن مسیر دقیق فایلی که الان اجرا می‌شود
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# مسیر پوشه استاتیک نسبت به فایل main.py
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+ASSETS_DIR = os.path.join(STATIC_DIR, "assets")
+
+# Models
 class SearchQuery(BaseModel):
     query: str
     max_results: int = 10
@@ -48,9 +58,6 @@ class AnalyzeRequest(BaseModel):
     language: str = "en"
 
 # --- API Endpoints ---
-@app.get("/api")
-def api_root():
-    return {"status": "Backend is running"}
 
 @app.post("/api/search")
 async def search_api(request: SearchQuery):
@@ -67,6 +74,7 @@ async def auto_sample_size(request: SearchQuery):
     if not gemini: raise HTTPException(500, "Gemini API Key missing")
     articles = pubmed.search_articles(request.query, max_results=5)
     abstracts = [a['abstract'] for a in articles if a.get('abstract')]
+    
     if not abstracts: return {"error": "No similar studies found."}
     
     full_text = " ".join(abstracts)
@@ -75,7 +83,7 @@ async def auto_sample_size(request: SearchQuery):
         effect = float(ai_data.get("suggested_effect_size", 0.5))
     except:
         effect = 0.5
-        ai_data = {"reasoning": "Default used."}
+        ai_data = {"reasoning": "Default used due to extraction error."}
         
     n = stats_tool.calculate_sample_size(effect)
     return {
@@ -85,15 +93,28 @@ async def auto_sample_size(request: SearchQuery):
         "basis_papers": [a['title'] for a in articles]
     }
 
-# --- سرو کردن فایل‌های استاتیک (React) ---
-# چک می‌کنیم که آیا پوشه static وجود دارد یا نه (برای جلوگیری از خطا در لوکال)
-if os.path.exists("app/static"):
-    app.mount("/assets", StaticFiles(directory="app/static/assets"), name="assets")
+# --- Serve React App (Robust Way) ---
 
-    @app.get("/{full_path:path}")
-    async def serve_react_app(full_path: str):
-        if full_path.startswith("api"):
-            raise HTTPException(404)
-        if os.path.exists("app/static/index.html"):
-            return FileResponse("app/static/index.html")
-        return {"error": "Frontend build not found"}
+# 1. Mount Assets (CSS/JS) if directory exists
+if os.path.isdir(ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+else:
+    print(f"WARNING: Assets directory not found at {ASSETS_DIR}. UI styles might be missing.")
+    # Create empty dir to prevent crash loop
+    os.makedirs(ASSETS_DIR, exist_ok=True)
+    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+
+# 2. Serve Index.html for all other routes
+@app.get("/{full_path:path}")
+async def serve_react_app(full_path: str):
+    if full_path.startswith("api"):
+        raise HTTPException(404)
+    
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    
+    return JSONResponse(
+        status_code=500, 
+        content={"error": "Frontend build not found. Check Dockerfile COPY step."}
+    )

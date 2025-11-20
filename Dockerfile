@@ -1,27 +1,28 @@
-# مرحله ۱: ساخت فرانت‌اند (React) با استفاده از سرورهای Hugging Face
+# Stage 1: Build React App
 FROM node:18 as build-step
 WORKDIR /app
 COPY package*.json ./
-# نصب پکیج‌های جاوااسکریپت (روی سرور انجام میشه)
 RUN npm install
 COPY . .
-# ساخت نسخه نهایی سایت
 RUN npm run build
 
-# مرحله ۲: آماده‌سازی بک‌اند (Python)
-FROM python:3.9
+# Stage 2: Setup Python Backend
+# تغییر نسخه به 3.10 برای حل مشکل کتابخانه‌های گوگل
+FROM python:3.10-slim
 WORKDIR /code
 
-# کپی کردن نیازمندی‌های پایتون
+# نصب نیازمندی‌های سیستم (اختیاری ولی برای اطمینان)
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 COPY ./backend/requirements.txt /code/requirements.txt
 
-# نصب پکیج‌های پایتون (روی سرور انجام میشه)
+# نصب پکیج‌های پایتون
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-# کپی کردن کدهای پایتون
+# کپی کد بک‌اند به داخل کانتینر
 COPY ./backend /code/app
 
-# کپی کردن سایت ساخته شده از مرحله ۱ به داخل پوشه پایتون
+# کپی بیلد فرانت‌اند از مرحله اول به پوشه استاتیک پایتون
 COPY --from=build-step /app/dist /code/app/static
 
 # اجرای برنامه
