@@ -1,20 +1,19 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+---
+title: ScholarAI Research Assistant
+emoji: 🧬
+colorFrom: indigo
+colorTo: cyan
+sdk: docker
+pinned: false
+app_port: 7860
+---
 
-# Run and deploy your AI Studio app
+# ScholarAI: Automated Research Assistant
 
-This contains everything you need to run your app locally.
+A powerful research assistant built with **React** (Frontend) and **FastAPI** (Backend), powered by **Google Gemini**.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1xUWWR4G3PGKKNzg20uRvD4GreYoSRutb
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Features
+- 🔍 **Smart Search:** Search PubMed with relevance ranking.
+- 🧠 **AI Analysis:** Find research gaps automatically.
+- 📊 **Statistical Tools:** Calculate accurate sample sizes.
+- 📄 **Proposal Writer:** Generate draft proposals in seconds.
