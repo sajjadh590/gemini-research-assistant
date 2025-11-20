@@ -1,0 +1,5 @@
+{
+  "name": "ScholarAI: Automated Research Assistant",
+  "description": "A comprehensive, automated research assistant for searching papers, identifying gaps, writing proposals, and statistical analysis using Gemini models.",
+  "requestFramePermissions": []
+}
