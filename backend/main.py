@@ -62,7 +62,7 @@ gemini = None
 
 if gemini_api_key:
     try:
-        gemini = GeminiClient()
+        gemini = GeminiClient(gemini_api_key)
         print("✅ Gemini Client Initialized Successfully.")
     except Exception as e:
         print(f"⚠️ Gemini Init Error: {e}")
