@@ -8,6 +8,7 @@ import os
 import json
 from dotenv import load_dotenv
 
+# اصلاح مسیر ایمپورت‌ها برای داکر
 from app.modules.pubmed_client import PubMedClient
 from app.modules.gemini_client import GeminiClient
 from app.modules.stats_engine import StatsEngine
@@ -47,6 +48,9 @@ class AnalyzeRequest(BaseModel):
     language: str = "en"
 
 # --- API Endpoints ---
+@app.get("/api")
+def api_root():
+    return {"status": "Backend is running"}
 
 @app.post("/api/search")
 async def search_api(request: SearchQuery):
@@ -81,13 +85,15 @@ async def auto_sample_size(request: SearchQuery):
         "basis_papers": [a['title'] for a in articles]
     }
 
-# --- بخش مهم: سرو کردن سایت React ---
-# اتصال فایل‌های استاتیک (CSS/JS)
-app.mount("/assets", StaticFiles(directory="app/static/assets"), name="assets")
+# --- سرو کردن فایل‌های استاتیک (React) ---
+# چک می‌کنیم که آیا پوشه static وجود دارد یا نه (برای جلوگیری از خطا در لوکال)
+if os.path.exists("app/static"):
+    app.mount("/assets", StaticFiles(directory="app/static/assets"), name="assets")
 
-# نمایش فایل HTML اصلی در صفحه اول
-@app.get("/{full_path:path}")
-async def serve_react_app(full_path: str):
-    if full_path.startswith("api"):
-        raise HTTPException(404)
-    return FileResponse("app/static/index.html")
+    @app.get("/{full_path:path}")
+    async def serve_react_app(full_path: str):
+        if full_path.startswith("api"):
+            raise HTTPException(404)
+        if os.path.exists("app/static/index.html"):
+            return FileResponse("app/static/index.html")
+        return {"error": "Frontend build not found"}
