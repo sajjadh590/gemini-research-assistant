@@ -7,15 +7,22 @@ class GeminiClient:
         if not api_key:
             raise ValueError("API Key is required")
         genai.configure(api_key=api_key)
-        # مدل فلش بهترین گزینه برای سرعت و دقت در نسخه رایگان است
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # تغییر مهم: استفاده از جدیدترین مدل Gemini 3 Pro
+        # این مدل هوش و استدلال بسیار بالاتری نسبت به نسخه‌های قبلی دارد
+        try:
+            self.model = genai.GenerativeModel('gemini-3-pro-preview')
+        except:
+            # اگر به هر دلیلی مدل ۳ در دسترس نبود، روی مدل سریع و پایدار قبلی سوییچ می‌کند
+            print("Warning: Could not load Gemini 3, falling back to Flash.")
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
 
     def analyze_gap(self, text, language="en"):
         prompt = f"""
         Analyze these abstracts and find research gaps.
         Output strictly JSON: {{ "gaps": [{{"topic": "string", "description": "string", "significance": "string"}}], "summary": "string", "methodologySuggestions": "string" }}
         Language: {language}
-        Abstracts: {text[:10000]}
+        Abstracts: {text[:15000]} 
         """
         return self._safe_generate(prompt)
 
@@ -64,7 +71,7 @@ class GeminiClient:
         **Task:** Write a full research proposal using the "Context Papers" below and following the "University Template" strictly.
         
         **Context Papers:**
-        {papers_text[:15000]}
+        {papers_text[:20000]} 
         
         **Template:**
         {university_template}
