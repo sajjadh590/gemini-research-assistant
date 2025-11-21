@@ -1,90 +1,67 @@
 import google.generativeai as genai
 import os
 import json
+import time
 
 class GeminiClient:
     def __init__(self, api_key):
         if not api_key:
             raise ValueError("API Key is required")
         genai.configure(api_key=api_key)
-        
-        # تغییر مهم: استفاده از جدیدترین مدل Gemini 3 Pro
-        # این مدل هوش و استدلال بسیار بالاتری نسبت به نسخه‌های قبلی دارد
+        # تعریف مدل‌ها
+        self.model_pro = genai.GenerativeModel('gemini-1.5-pro') # مدل قوی
+        self.model_flash = genai.GenerativeModel('gemini-1.5-flash') # مدل سریع و ارزان
+
+    def _generate_with_fallback(self, prompt):
+        """تلاش با مدل قوی، اگر نشد با مدل سریع"""
         try:
-            self.model = genai.GenerativeModel('gemini-3-pro-preview')
-        except:
-            # اگر به هر دلیلی مدل ۳ در دسترس نبود، روی مدل سریع و پایدار قبلی سوییچ می‌کند
-            print("Warning: Could not load Gemini 3, falling back to Flash.")
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            return self.model_pro.generate_content(prompt).text
+        except Exception as e:
+            print(f"⚠️ Gemini Pro Error (Quota/Server): {e}. Switching to Flash...")
+            try:
+                time.sleep(1) # مکث کوتاه
+                return self.model_flash.generate_content(prompt).text
+            except Exception as e2:
+                return f"Error: AI Service Unavailable. {str(e2)}"
 
     def analyze_gap(self, text, language="en"):
         prompt = f"""
         Analyze these abstracts and find research gaps.
-        Output strictly JSON: {{ "gaps": [{{"topic": "string", "description": "string", "significance": "string"}}], "summary": "string", "methodologySuggestions": "string" }}
+        Output strictly JSON with this structure: 
+        {{ 
+            "gaps": [
+                {{"topic": "string", "description": "string", "significance": "string"}}
+            ], 
+            "summary": "string", 
+            "methodologySuggestions": "string" 
+        }}
         Language: {language}
-        Abstracts: {text[:15000]} 
+        Abstracts: {text[:15000]}
         """
-        return self._safe_generate(prompt)
+        response_text = self._generate_with_fallback(prompt)
+        return self._clean_json(response_text)
 
     def generate_proposal(self, topic, papers_text, structure, language="fa"):
-        # --- قالب استخراج شده از فایل PDF دانشگاه آزاد مشهد ---
+        # (قالب دانشگاه که قبلاً اضافه کردیم اینجا هست)
         university_template = """
-        الزامات فرمت پروپوزال (دقیقاً طبق این ساختار بنویس):
-        
-        1. **عنوان تحقیق (Title)**:
-           - عنوان فارسی و انگلیسی دقیق.
-        
-        2. **بیان مسئله (Problem Statement)**:
-           - تشریح ابعاد مسئله و پاتوفیزیولوژی (مکانیزم بیماری/مشکل).
-           - آمارهای جهانی و آمارهای ایران (با استناد به مقالات ورودی).
-           - بیان جنبه‌های مبهم و ضرورت انجام کار (Gap Analysis).
-        
-        3. **مرور بر مطالعات انجام شده (Literature Review)**:
-           - حداقل ۳ مطالعه مرتبط را بررسی کن.
-           - فرمت هر مورد: "نام محقق و همکاران در سال (Year) مطالعه‌ای در (Location) انجام دادند. هدف ... بود و نتایج نشان داد که ..."
-        
-        4. **اهداف و فرضیات**:
-           - هدف کلی طرح.
-           - اهداف اختصاصی (ریز به ریز و شماره‌گذاری شده).
-           - فرضیات یا سوالات تحقیق (متناسب با اهداف).
-        
-        5. **روش اجرای طرح (Methodology)**:
-           - نوع مطالعه (مثلاً مقطعی/توصیفی).
-           - جامعه پژوهش، معیارهای ورود (Inclusion) و خروج (Exclusion).
-           - حجم نمونه پیشنهادی و روش نمونه‌گیری.
-           - ابزار جمع‌آوری اطلاعات (چک‌لیست، پرونده‌خوانی و...).
-           - متغیرهای پژوهش (نام، نوع، نقش).
-           - روش تجزیه و تحلیل آماری (نام نرم‌افزار مثل SPSS و آزمون‌ها).
-        
-        6. **ملاحظات اخلاقی**:
-           - محرمانگی اطلاعات، عدم تحمیل هزینه، رضایت آگاهانه (یا عدم نیاز به آن در مطالعات پرونده‌ای).
-        
-        7. **منابع (References)**:
-           - لیست منابع به سبک ونکوور (Vancouver Style).
+        1. **عنوان تحقیق (Title)**: فارسی و انگلیسی.
+        2. **بیان مسئله**: تشریح دقیق، آمارها، ضرورت.
+        3. **مرور متون**: ۳ مطالعه با ذکر نام، سال، روش و نتیجه.
+        4. **اهداف و فرضیات**: هدف کلی، اختصاصی، سوالات.
+        5. **روش کار**: نوع مطالعه، جامعه، حجم نمونه، ابزار، تحلیل آماری.
+        6. **اخلاق**: محرمانگی و رضایت.
+        7. **منابع**: ونکوور.
         """
-
+        
         prompt = f"""
-        Act as a medical researcher submitting a thesis proposal to Islamic Azad University of Mashhad.
-        
-        **Research Topic:** {topic}
-        
-        **Task:** Write a full research proposal using the "Context Papers" below and following the "University Template" strictly.
-        
-        **Context Papers:**
-        {papers_text[:20000]} 
-        
-        **Template:**
-        {university_template}
-        
-        **Language:** Persian (Farsi). Tone: Academic and Formal.
-        **Output:** ONLY the proposal text.
+        Act as a PhD researcher. Write a thesis proposal for Islamic Azad University.
+        Topic: {topic}
+        Context Papers: {papers_text[:20000]}
+        Template: {university_template}
+        Language: Persian (Farsi). Tone: Academic.
+        Output: ONLY the proposal text.
         """
-        
-        try:
-            response = self.model.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            return f"Error generating proposal: {str(e)}"
+        return self._generate_with_fallback(prompt)
 
     def extract_sample_params(self, text):
         prompt = f"""
@@ -92,18 +69,25 @@ class GeminiClient:
         Output strictly JSON: {{ "suggested_effect_size": 0.5, "reasoning": "string" }}
         Abstracts: {text[:5000]}
         """
-        return self._safe_generate(prompt, default='{"suggested_effect_size": 0.5, "reasoning": "Default"}')
+        response_text = self._generate_with_fallback(prompt)
+        return self._clean_json(response_text, default='{"suggested_effect_size": 0.5, "reasoning": "Default due to error"}')
 
-    def _safe_generate(self, prompt, default="{}"):
+    def _clean_json(self, text, default="{}"):
         try:
-            response = self.model.generate_content(prompt)
-            cleaned = response.text.replace("```json", "").replace("```", "").strip()
+            cleaned = text.replace("```json", "").replace("```", "").strip()
             if not cleaned.startswith("{"):
                  start = cleaned.find("{")
                  end = cleaned.rfind("}") + 1
                  if start != -1 and end != -1:
                      cleaned = cleaned[start:end]
+            # تست معتبر بودن JSON
             json.loads(cleaned)
             return cleaned
-        except Exception as e:
-            return default
+        except:
+            print(f"JSON Parse Error. Raw text: {text[:100]}...")
+            # ساخت یک JSON مصنوعی تا برنامه کرش نکند
+            return json.dumps({
+                "gaps": [{"topic": "Error parsing AI response", "description": "Please try again.", "significance": "N/A"}],
+                "summary": "Could not generate summary.",
+                "methodologySuggestions": "N/A"
+            })
